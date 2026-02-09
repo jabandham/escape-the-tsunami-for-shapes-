@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>BRAINROT TYCOON: SPREAD & RARITY</title>
+    <title>BRAINROT TYCOON: R6 EDITION</title>
     <style>
         body { margin: 0; overflow: hidden; background: #87CEEB; font-family: 'Arial Black', sans-serif; }
         #stats { position: absolute; top: 10px; left: 10px; color: yellow; font-size: 24px; background: rgba(0,0,0,0.8); padding: 15px; border-radius: 10px; z-index: 10; border: 2px solid #fff; }
@@ -47,10 +47,9 @@
         sun.position.set(50, 100, 50);
         scene.add(sun);
 
-        // --- STATE ---
         window.upgradedSpeed = 18; window.isSlowMode = false; window.wallet = 0; window.speedCost = 50;
 
-        // --- MAP ---
+        // --- MAP SETUP ---
         const mapWidth = 160, mapLength = 1600, safeLineZ = 400, baseZ = 600, spawnZ = -800;
         const ground = new THREE.Mesh(new THREE.PlaneGeometry(mapWidth, mapLength), new THREE.MeshStandardMaterial({ color: 0x22ff22 }));
         ground.rotation.x = -Math.PI / 2; scene.add(ground);
@@ -62,7 +61,6 @@
         const safetyLine = new THREE.Mesh(new THREE.BoxGeometry(160, 2, 10), new THREE.MeshStandardMaterial({color: 0xffff00}));
         safetyLine.position.set(0, 1, safeLineZ); scene.add(safetyLine);
 
-        // --- TRENCHES (DIRT GEOMETRY PRESERVED) ---
         const trenches = [];
         const dirtMat = new THREE.MeshStandardMaterial({ color: 0x5C4033 }); 
         for(let i=0; i<8; i++) {
@@ -73,44 +71,55 @@
             trenches.push({ z: zPos });
         }
 
-        // --- PLAYER ---
+        // --- R6 PLAYER BODY ---
         const player = new THREE.Group();
-        const pBody = new THREE.Mesh(new THREE.BoxGeometry(1.5, 2, 0.8), new THREE.MeshStandardMaterial({color: 0xffffff}));
-        const pHead = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.2, 1.2), new THREE.MeshStandardMaterial({color: 0x000000}));
-        pHead.position.y = 1.6; player.add(pBody, pHead);
-        const carryContainer = new THREE.Group(); carryContainer.position.y = 4.5; player.add(carryContainer);
+        const limbMat = new THREE.MeshStandardMaterial({color: 0xffffff});
+        const headMat = new THREE.MeshStandardMaterial({color: 0x000000});
+
+        const torso = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 1), limbMat);
+        const head = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.2, 1.2), headMat);
+        head.position.y = 1.6;
+        
+        const lArm = new THREE.Mesh(new THREE.BoxGeometry(1, 2, 1), limbMat);
+        lArm.position.set(-1.5, 0, 0);
+        const rArm = new THREE.Mesh(new THREE.BoxGeometry(1, 2, 1), limbMat);
+        rArm.position.set(1.5, 0, 0);
+        
+        const lLeg = new THREE.Mesh(new THREE.BoxGeometry(1, 2, 1), limbMat);
+        lLeg.position.set(-0.5, -2, 0);
+        const rLeg = new THREE.Mesh(new THREE.BoxGeometry(1, 2, 1), limbMat);
+        rLeg.position.set(0.5, -2, 0);
+
+        const carryContainer = new THREE.Group();
+        carryContainer.position.y = 3; 
+        
+        torso.add(head, lArm, rArm, lLeg, rLeg, carryContainer);
+        player.add(torso);
+        
         const arrow = new THREE.Mesh(new THREE.ConeGeometry(1, 2, 8), new THREE.MeshBasicMaterial({color: 0xffff00, depthTest: false}));
         arrow.rotation.x = Math.PI; arrow.position.y = 7.5; arrow.visible = false; arrow.renderOrder = 10000;
-        player.add(arrow); player.position.set(0, 1.5, baseZ + 50); scene.add(player);
+        player.add(arrow); 
+        player.position.set(0, 3.5, baseZ + 50); scene.add(player);
 
-        // --- UPDATED WEIGHTED SPREAD SPAWNING ---
+        // --- BRAINROTS & TYCOON ---
         const brainrots = [];
         const geometries = [new THREE.BoxGeometry(2,2,2), new THREE.SphereGeometry(1.2,16,16), new THREE.ConeGeometry(1.5,2.5,8), new THREE.TorusGeometry(1,0.4,8,16)];
         function spawnB() {
-            // Pick a Z coordinate: biased towards the base (safeLineZ)
-            // Using a square to make the back extremely sparse
             const rand = Math.random();
-            const z = safeLineZ - (Math.pow(rand, 1.5) * (safeLineZ - spawnZ - 50));
-            
-            // Determine rarity based on distance from base
-            const distanceFactor = (safeLineZ - z) / (safeLineZ - spawnZ); // 0 at base, 1 at back wall
+            const z = safeLineZ - (Math.pow(rand, 1.3) * (safeLineZ - spawnZ - 50));
+            const distanceFactor = (safeLineZ - z) / (safeLineZ - spawnZ);
+            let incomeBase = Math.floor(5 + (distanceFactor * 45)); 
+            let mut="NORMAL", color=new THREE.Color(Math.random()*0xffffff), val = incomeBase;
             const roll = Math.random();
-            
-            let mut="NORMAL", color=new THREE.Color(Math.random()*0xffffff), val=10;
-            
-            // Diamond only spawns far back (factor > 0.7)
-            if(distanceFactor > 0.7 && roll < 0.15) { mut="DIAMOND"; color.set(0x00ffff); val=200; }
-            // Gold spawns in middle-back (factor > 0.4)
-            else if(distanceFactor > 0.4 && roll < 0.25) { mut="GOLD"; color.set(0xffd700); val=50; }
-            
+            if(distanceFactor > 0.7 && roll < 0.15) { mut="DIAMOND"; color.set(0x00ffff); val = Math.floor(val * 4); } 
+            else if(distanceFactor > 0.4 && roll < 0.25) { mut="GOLD"; color.set(0xffd700); val = Math.floor(val * 2); }
             const b = new THREE.Mesh(geometries[Math.floor(Math.random()*geometries.length)], new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.2 }));
             b.position.set(Math.random()*140-70, 1.5, z);
-            b.userData = { income: val, color, mut, geo: b.geometry };
+            b.userData = { income: Math.floor(val), color, mut, geo: b.geometry };
             scene.add(b); brainrots.push(b);
         }
-        for(let i=0; i<35; i++) spawnB();
+        for(let i=0; i<40; i++) spawnB();
 
-        // --- UI & TYCOON ---
         function createBtnTex(text, color) {
             const canvas = document.createElement('canvas'); canvas.width = 256; canvas.height = 256;
             const ctx = canvas.getContext('2d'); ctx.fillStyle = color; ctx.fillRect(0,0,256,256);
@@ -131,7 +140,7 @@
             document.getElementById('upgrade-btn').innerText = `👤 +10 SPEED ($${Math.floor(window.speedCost)})`;
         }
 
-        document.getElementById('upgrade-btn').onclick = () => { if(window.wallet >= window.speedCost) { window.wallet -= window.speedCost; window.upgradedSpeed += 10; window.speedCost *= 3; updateUI(); } };
+        document.getElementById('upgrade-btn').onclick = () => { if(window.wallet >= window.speedCost) { window.wallet -= Math.floor(window.speedCost); window.upgradedSpeed += 10; window.speedCost = Math.floor(window.speedCost * 3); updateUI(); } };
         const slowBtn = document.getElementById('slow-mode-btn');
         slowBtn.onclick = () => { window.isSlowMode = !window.isSlowMode; slowBtn.innerText = window.isSlowMode ? "SLOW MODE: ON" : "SLOW MODE: OFF"; slowBtn.classList.toggle('active'); updateUI(); };
 
@@ -151,8 +160,9 @@
 
         const keys = {}; const waves = []; let lastWave = 0, holdTime = 0, heldItem = null;
         window.onkeydown=(e)=>keys[e.code]=true; window.onkeyup=(e)=>{keys[e.code]=false; if(e.code==='KeyE')holdTime=0;};
-        setInterval(() => { slots.forEach(s => { if(s.isActive) { s.storedCash += s.income; s.colBtn.material.map = createBtnTex(`$${Math.floor(s.storedCash)}\nCOLLECT`, "#00aa00"); } }); }, 1000);
+        setInterval(() => { slots.forEach(s => { if(s.isActive) { s.storedCash += Math.floor(s.income); s.colBtn.material.map = createBtnTex(`$${Math.floor(s.storedCash)}\nCOLLECT`, "#00aa00"); } }); }, 1000);
 
+        // --- ANIMATION LOOP ---
         function animate(time) {
             requestAnimationFrame(animate);
             if(time - lastWave > 4000) {
@@ -163,6 +173,7 @@
             }
 
             const sDown = keys['KeyS'];
+            const moving = keys['KeyW'] || keys['KeyS'] || keys['KeyA'] || keys['KeyD'];
             let currentMoveSpeed = window.isSlowMode ? 18 : window.upgradedSpeed;
             const moveAmt = currentMoveSpeed * 0.05;
             let nX = player.position.x, nZ = player.position.z;
@@ -174,14 +185,28 @@
             if(nZ > spawnZ + 10 && nZ < baseZ + 180) player.position.z = nZ;
             player.rotation.y = sDown ? Math.PI : 0;
 
+            // R6 ANIMATION LOGIC
+            if(moving) {
+                const animSpeed = time * 0.01;
+                const swing = Math.sin(animSpeed) * 0.5;
+                lArm.rotation.x = swing;
+                rArm.rotation.x = -swing;
+                lLeg.rotation.x = -swing;
+                rLeg.rotation.x = swing;
+                torso.position.y = Math.sin(animSpeed * 2) * 0.1; // Body bob
+            } else {
+                lArm.rotation.x = rArm.rotation.x = lLeg.rotation.x = rLeg.rotation.x = 0;
+                torso.position.y = 0;
+            }
+
             let inT = false;
             trenches.forEach(t => { if(Math.abs(player.position.z - t.z) < 15 && player.position.z < safeLineZ) inT = true; });
-            player.position.y = THREE.MathUtils.lerp(player.position.y, inT ? -3.5 : 1.5, 0.1);
+            player.position.y = THREE.MathUtils.lerp(player.position.y, inT ? -1.5 : 3.5, 0.1);
 
             waves.forEach((w, i) => {
                 w.position.z += w.userData.speed;
                 if(w.position.z >= safeLineZ) { scene.remove(w); waves.splice(i,1); return; }
-                if(!inT && Math.abs(w.position.z - player.position.z) < 8) { player.position.set(0, 1.5, baseZ + 50); heldItem = null; arrow.visible = false; carryContainer.clear(); }
+                if(!inT && Math.abs(w.position.z - player.position.z) < 8) { player.position.set(0, 3.5, baseZ + 50); heldItem = null; arrow.visible = false; carryContainer.clear(); }
             });
 
             const nearB = brainrots.find(b => player.position.distanceTo(b.position) < 8);
@@ -189,7 +214,8 @@
             const ui = document.getElementById('interact-ui');
 
             if(nearB && !heldItem) {
-                ui.style.display = 'block'; document.getElementById('int-text').innerHTML = `<span style="color:${nearB.userData.color.getStyle()}">${nearB.userData.mut}</span><br>HOLD E`;
+                ui.style.display = 'block'; 
+                document.getElementById('int-text').innerHTML = `<span style="color:${nearB.userData.color.getStyle()}">${nearB.userData.mut} ($${Math.floor(nearB.userData.income)}/s)</span><br>HOLD E`;
                 if(keys['KeyE']) {
                     holdTime += 16; document.getElementById('progress-fill').style.width = (holdTime/1000*100)+'%';
                     if(holdTime > 1000) { heldItem = nearB.userData; scene.remove(nearB); brainrots.splice(brainrots.indexOf(nearB),1); spawnB(); holdTime = 0; arrow.visible = true; carryContainer.add(new THREE.Mesh(heldItem.geo, new THREE.MeshStandardMaterial({ color: heldItem.color, emissive: heldItem.color, emissiveIntensity: 0.5 }))); }
@@ -197,21 +223,19 @@
             } else if(nearS && heldItem) {
                 ui.style.display = 'block'; document.getElementById('int-text').innerText = "TAP E TO SWAP/PLACE";
                 if(keys['KeyE']) { 
-                    if(nearS.isActive) window.wallet += (nearS.income * 10);
-                    nearS.isActive = true; nearS.income = heldItem.income; nearS.data = { mut: heldItem.mut, color: heldItem.color.getStyle() };
-                    nearS.label.material = createLabelMat(nearS.data.mut, `$${nearS.income.toFixed(1)}/s`, nearS.data.color);
+                    if(nearS.isActive) window.wallet += Math.floor(nearS.income * 10);
+                    nearS.isActive = true; nearS.income = Math.floor(heldItem.income); nearS.data = { mut: heldItem.mut, color: heldItem.color.getStyle() };
+                    nearS.label.material = createLabelMat(nearS.data.mut, `$${Math.floor(nearS.income)}/s`, nearS.data.color);
                     heldItem = null; arrow.visible = false; carryContainer.clear(); updateUI();
                 }
             } else { ui.style.display = 'none'; document.getElementById('progress-fill').style.width = '0%'; }
 
             slots.forEach(sl => {
                 if(!sl.isActive) return;
-                if(player.position.distanceTo(sl.g.position.clone().add(new THREE.Vector3(-3,1,3))) < 5 && sl.storedCash > 0) { window.wallet += sl.storedCash; sl.storedCash = 0; sl.colBtn.material.map = createBtnTex(`$0\nCOLLECT`, "#00aa00"); updateUI(); }
-                if(player.position.distanceTo(sl.g.position.clone().add(new THREE.Vector3(3,1,3))) < 5 && window.wallet >= sl.upCost) { window.wallet -= sl.upCost; sl.lvl++; sl.income += (sl.income * 0.1); sl.upCost *= 3; sl.upBtn.material.map = createBtnTex(`LVL ${sl.lvl}\n$${sl.upCost}`, "#0000aa"); sl.label.material = createLabelMat(sl.data.mut, `$${sl.income.toFixed(1)}/s`, sl.data.color); updateUI(); }
+                if(player.position.distanceTo(sl.g.position.clone().add(new THREE.Vector3(-3,1,3))) < 5 && sl.storedCash > 0) { window.wallet += Math.floor(sl.storedCash); sl.storedCash = 0; sl.colBtn.material.map = createBtnTex(`$0\nCOLLECT`, "#00aa00"); updateUI(); }
+                if(player.position.distanceTo(sl.g.position.clone().add(new THREE.Vector3(3,1,3))) < 5 && window.wallet >= sl.upCost) { window.wallet -= Math.floor(sl.upCost); sl.lvl++; sl.income = Math.floor(sl.income * 1.1); sl.upCost = Math.floor(sl.upCost * 3); sl.upBtn.material.map = createBtnTex(`LVL ${sl.lvl}\n$${Math.floor(sl.upCost)}`, "#0000aa"); sl.label.material = createLabelMat(sl.data.mut, `$${Math.floor(sl.income)}/s`, sl.data.color); updateUI(); }
             });
 
-            // CAMERA REVERSE LOGIC
-            arrow.rotation.y += 0.05;
             let camOffset = sDown ? new THREE.Vector3(0, 30, -50) : new THREE.Vector3(0, 30, 50);
             let lookAtPos = sDown ? player.position.clone().add(new THREE.Vector3(0, 0, 60)) : player.position.clone().add(new THREE.Vector3(0, 0, -60));
             camera.position.lerp(player.position.clone().add(camOffset), 0.1);
