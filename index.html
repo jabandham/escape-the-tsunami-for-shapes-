@@ -2,27 +2,58 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Escape The Tusunami For Shapes</title>
+    <title>BRAINROT TYCOON: MOBILE EDITION</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #87CEEB; font-family: 'Arial Black', sans-serif; }
+        body { margin: 0; overflow: hidden; background: #87CEEB; font-family: 'Arial Black', sans-serif; user-select: none; touch-action: none; }
         #stats { position: absolute; top: 10px; left: 10px; color: yellow; font-size: 24px; background: rgba(0,0,0,0.8); padding: 15px; border-radius: 10px; z-index: 10; border: 2px solid #fff; }
         #upgrade-btn { position: absolute; top: 10px; right: 10px; padding: 15px 25px; background: #ff00ff; color: white; border: 4px solid #fff; cursor: pointer; font-size: 20px; z-index: 11; border-radius: 10px; }
         #slow-mode-btn { margin-top: 10px; padding: 5px 10px; background: #555; color: white; border: 2px solid #fff; cursor: pointer; font-size: 14px; border-radius: 5px; width: 100%; }
         #slow-mode-btn.active { background: #00ffff; color: #000; }
+        
+        /* New Mobile Toggle Button */
+        #mobile-toggle-btn { margin-top: 10px; padding: 5px 10px; background: #333; color: white; border: 2px solid #fff; cursor: pointer; font-size: 14px; border-radius: 5px; width: 100%; }
+
         #interact-ui { position: absolute; bottom: 20%; left: 50%; transform: translateX(-50%); color: white; font-size: 24px; text-align: center; display: none; background: rgba(0,0,0,0.8); padding: 15px 30px; border-radius: 15px; border: 2px solid #fff; }
         #progress-bar { width: 200px; height: 10px; background: #555; margin-top: 10px; border: 1px solid #fff; }
         #progress-fill { width: 0%; height: 100%; background: #00ff00; }
         #audio-notice { position: absolute; bottom: 10px; right: 10px; color: white; background: rgba(0,0,0,0.5); padding: 5px 10px; border-radius: 5px; pointer-events: none; }
+
+        /* Mobile Control Overlay */
+        .mobile-ctrl { position: absolute; bottom: 40px; display: none; z-index: 100; pointer-events: none; }
+        #move-ctrl { left: 40px; }
+        #look-ctrl { right: 40px; }
+        .btn { 
+            width: 80px; height: 80px; background: rgba(255,255,255,0.2); 
+            border: 4px solid #fff; border-radius: 50%; display: flex; 
+            justify-content: center; align-items: center; color: white; 
+            font-size: 35px; margin: 15px; pointer-events: auto; touch-action: none; 
+        }
+        .btn:active { background: rgba(255,255,255,0.5); }
+        .btn-e { background: rgba(255, 217, 0, 0.4); width: 100px; height: 100px; font-weight: bold; font-size: 24px; }
     </style>
 </head>
 <body onclick="startAudio()">
     <div id="audio-notice">🔈 Click anywhere to enable music</div>
     <div id="stats">
-        💰 Money: $<span id="m">0</span><br>
+        💰 Wallet: $<span id="m">0</span><br>
         ⚡ Speed: <span id="speed-val">18</span><br>
         <button id="slow-mode-btn">SLOW MODE: OFF</button>
+        <button id="mobile-toggle-btn">MOBILE MODE: OFF</button>
     </div>
     <button id="upgrade-btn">👤 +10 SPEED ($50)</button>
+
+    <div id="move-ctrl" class="mobile-ctrl">
+        <div class="btn" id="m-up">▲</div>
+        <div class="btn" id="m-down">▼</div>
+    </div>
+    
+    <div id="look-ctrl" class="mobile-ctrl">
+        <div class="btn btn-e" id="m-e">E</div>
+        <div style="display: flex;">
+            <div class="btn" id="m-left">◀</div>
+            <div class="btn" id="m-right">▶</div>
+        </div>
+    </div>
 
     <div id="interact-ui">
         <span id="int-text">HOLD E</span>
@@ -174,6 +205,27 @@
         const slowBtn = document.getElementById('slow-mode-btn');
         slowBtn.onclick = () => { window.isSlowMode = !window.isSlowMode; slowBtn.innerText = window.isSlowMode ? "SLOW MODE: ON" : "SLOW MODE: OFF"; slowBtn.classList.toggle('active'); updateUI(); };
 
+        // MOBILE CONTROL SETUP
+        let mobileActive = false;
+        const mobileKeys = { KeyW: false, KeyS: false, KeyA: false, KeyD: false, KeyE: false };
+        const mobToggle = document.getElementById('mobile-toggle-btn');
+        mobToggle.onclick = () => {
+            mobileActive = !mobileActive;
+            mobToggle.innerText = mobileActive ? "MOBILE CONTROLS: ON" : "MOBILE CONTROLS: OFF";
+            document.getElementById('move-ctrl').style.display = mobileActive ? 'block' : 'none';
+            document.getElementById('look-ctrl').style.display = mobileActive ? 'block' : 'none';
+        };
+
+        function bindMobile(id, key) {
+            const el = document.getElementById(id);
+            el.addEventListener('pointerdown', (e) => { e.preventDefault(); mobileKeys[key] = true; });
+            el.addEventListener('pointerup', (e) => { e.preventDefault(); mobileKeys[key] = false; });
+            el.addEventListener('pointerleave', (e) => { e.preventDefault(); mobileKeys[key] = false; });
+        }
+        bindMobile('m-up', 'KeyW'); bindMobile('m-down', 'KeyS');
+        bindMobile('m-left', 'KeyA'); bindMobile('m-right', 'KeyD');
+        bindMobile('m-e', 'KeyE');
+
         const slots = [];
         for(let i=0; i<10; i++) {
             const g = new THREE.Group();
@@ -194,10 +246,15 @@
 
         function animate(time) {
             requestAnimationFrame(animate);
+
+            // Merge Input
+            const activeKeys = { ...keys };
+            if(mobileActive) Object.keys(mobileKeys).forEach(k => { if(mobileKeys[k]) activeKeys[k] = true; });
+
             if(time - lastWave > 4000) {
                 const roll = Math.random(); let color, speed, emo, sTxt;
                 if(roll < 0.2) { color = 0xff0000; speed = 7.5; emo = "😡"; sTxt = "FAST"; } 
-                else if(roll < 0.5) { color = 0x00ff00; speed = 4.5; emo = "😐"; sTxt = "MEDIUM"; } 
+                else if(roll < 0.5) { color = 0x00ff00; speed = 4.5; emo = "😐"; sTxt = "NORMAL"; } 
                 else { color = 0x0066ff; speed = 2.5; emo = "😃"; sTxt = "SLOW"; }
                 const w = new THREE.Mesh(new THREE.BoxGeometry(170, 80, 10), new THREE.MeshStandardMaterial({ color, opacity: 1 }));
                 w.position.set(0, 40, spawnZ + 20); 
@@ -205,16 +262,24 @@
                 w.userData = { speed }; scene.add(w); waves.push(w); lastWave = time;
             }
 
-            const sDown = keys['KeyS'];
-            const moving = keys['KeyW'] || keys['KeyS'] || keys['KeyA'] || keys['KeyD'];
+            const sDown = activeKeys['KeyS'];
+            
+            // Flip UI Arrows visually when S is held
+            if(mobileActive) {
+                document.getElementById('m-left').innerText = sDown ? "▶" : "◀";
+                document.getElementById('m-right').innerText = sDown ? "◀" : "▶";
+            }
+
+            const moving = activeKeys['KeyW'] || activeKeys['KeyS'] || activeKeys['KeyA'] || activeKeys['KeyD'];
             let currentMoveSpeed = window.isSlowMode ? 18 : window.upgradedSpeed;
             const moveAmt = currentMoveSpeed * 0.05;
             let moveX = 0, moveZ = 0;
 
-            if(keys['KeyW']) moveZ -= 1;
-            if(keys['KeyS']) moveZ += 1;
-            if(keys['KeyA']) moveX += sDown ? 1 : -1; 
-            if(keys['KeyD']) moveX += sDown ? -1 : 1;
+            if(activeKeys['KeyW']) moveZ -= 1;
+            if(activeKeys['KeyS']) moveZ += 1;
+            // Logical reversal so Left is still Left relative to world when moving backwards
+            if(activeKeys['KeyA']) moveX += sDown ? 1 : -1; 
+            if(activeKeys['KeyD']) moveX += sDown ? -1 : 1;
 
             if(moving) {
                 const angle = Math.atan2(moveX, moveZ);
@@ -232,7 +297,6 @@
                 lArm.rotation.x = rArm.rotation.x = lLeg.rotation.x = rLeg.rotation.x = 0; torso.position.y = 0;
             }
 
-            // CROSSFADE LOGIC
             crossfadeMusic(player.position.z < safeLineZ);
 
             let inT = false;
@@ -252,13 +316,13 @@
             if(nearB && !heldItem) {
                 ui.style.display = 'block'; 
                 document.getElementById('int-text').innerHTML = `<span style="color:${nearB.userData.color.getStyle()}">${nearB.userData.mut} ($${Math.floor(nearB.userData.income)}/s)</span><br>HOLD E`;
-                if(keys['KeyE']) {
+                if(activeKeys['KeyE']) {
                     holdTime += 16; document.getElementById('progress-fill').style.width = (holdTime/1000*100)+'%';
                     if(holdTime > 1000) { heldItem = nearB.userData; scene.remove(nearB); brainrots.splice(brainrots.indexOf(nearB),1); spawnB(); holdTime = 0; arrow.visible = true; carryContainer.add(new THREE.Mesh(heldItem.geo, new THREE.MeshStandardMaterial({ color: heldItem.color, emissive: heldItem.color, emissiveIntensity: 0.5 }))); }
                 }
             } else if(nearS && heldItem) {
                 ui.style.display = 'block'; document.getElementById('int-text').innerText = "TAP E TO SWAP/PLACE";
-                if(keys['KeyE']) { 
+                if(activeKeys['KeyE']) { 
                     if(nearS.isActive) window.wallet += Math.floor(nearS.income * 10);
                     nearS.isActive = true; nearS.income = Math.floor(heldItem.income); nearS.data = { mut: heldItem.mut, color: heldItem.color.getStyle() };
                     nearS.label.material = createLabelMat(nearS.data.mut, `$${Math.floor(nearS.income)}/s`, nearS.data.color);
@@ -272,6 +336,7 @@
                 if(player.position.distanceTo(sl.g.position.clone().add(new THREE.Vector3(3,1,3))) < 5 && window.wallet >= sl.upCost) { window.wallet -= Math.floor(sl.upCost); sl.lvl++; sl.income = Math.floor(sl.income * 1.1); sl.upCost = Math.floor(sl.upCost * 3); sl.upBtn.material.map = createBtnTex(`LVL ${sl.lvl}\n$${Math.floor(sl.upCost)}`, "#0000aa"); sl.label.material = createLabelMat(sl.data.mut, `$${Math.floor(sl.income)}/s`, sl.data.color); updateUI(); }
             });
 
+            // Camera System with 180 flip
             let camOffset = sDown ? new THREE.Vector3(0, 24, -40) : new THREE.Vector3(0, 24, 40);
             let lookAtPos = sDown ? player.position.clone().add(new THREE.Vector3(0, 0, 60)) : player.position.clone().add(new THREE.Vector3(0, 0, -60));
             camera.position.lerp(player.position.clone().add(camOffset), 0.1);
