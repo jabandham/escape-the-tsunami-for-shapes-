@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>BRAINROT TYCOON: R6 EDITION</title>
+    <title>BRAINROT TYCOON: SOUND EDITION</title>
     <style>
         body { margin: 0; overflow: hidden; background: #87CEEB; font-family: 'Arial Black', sans-serif; }
         #stats { position: absolute; top: 10px; left: 10px; color: yellow; font-size: 24px; background: rgba(0,0,0,0.8); padding: 15px; border-radius: 10px; z-index: 10; border: 2px solid #fff; }
@@ -12,9 +12,11 @@
         #interact-ui { position: absolute; bottom: 20%; left: 50%; transform: translateX(-50%); color: white; font-size: 24px; text-align: center; display: none; background: rgba(0,0,0,0.8); padding: 15px 30px; border-radius: 15px; border: 2px solid #fff; }
         #progress-bar { width: 200px; height: 10px; background: #555; margin-top: 10px; border: 1px solid #fff; }
         #progress-fill { width: 0%; height: 100%; background: #00ff00; }
+        #audio-notice { position: absolute; bottom: 10px; right: 10px; color: white; background: rgba(0,0,0,0.5); padding: 5px 10px; border-radius: 5px; pointer-events: none; }
     </style>
 </head>
-<body>
+<body onclick="startAudio()">
+    <div id="audio-notice">🔈 Click anywhere to enable music</div>
     <div id="stats">
         💰 Wallet: $<span id="m">0</span><br>
         ⚡ Speed: <span id="speed-val">18</span><br>
@@ -27,12 +29,46 @@
         <div id="progress-bar"><div id="progress-fill"></div></div>
     </div>
 
+    <audio id="bgm-chill" loop>
+        <source src="https://cdn.pixabay.com/audio/2022/02/22/audio_d0c6ff1bab.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="bgm-danger" loop>
+        <source src="https://cdn.pixabay.com/audio/2022/03/10/audio_c8c8a73a5a.mp3" type="audio/mpeg">
+    </audio>
+
     <script type="importmap">
         { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
     </script>
 
     <script type="module">
         import * as THREE from 'three';
+
+        // Audio Management
+        const chillMusic = document.getElementById('bgm-chill');
+        const dangerMusic = document.getElementById('bgm-danger');
+        let audioStarted = false;
+
+        window.startAudio = () => {
+            if (audioStarted) return;
+            audioStarted = true;
+            chillMusic.volume = 0.5;
+            dangerMusic.volume = 0;
+            chillMusic.play();
+            dangerMusic.play();
+            document.getElementById('audio-notice').style.display = 'none';
+        };
+
+        function crossfadeMusic(toDanger) {
+            if (!audioStarted) return;
+            const step = 0.05;
+            if (toDanger) {
+                if (dangerMusic.volume < 0.5) dangerMusic.volume = Math.min(0.5, dangerMusic.volume + step);
+                if (chillMusic.volume > 0) chillMusic.volume = Math.max(0, chillMusic.volume - step);
+            } else {
+                if (chillMusic.volume < 0.5) chillMusic.volume = Math.min(0.5, chillMusic.volume + step);
+                if (dangerMusic.volume > 0) dangerMusic.volume = Math.max(0, dangerMusic.volume - step);
+            }
+        }
 
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x87CEEB);
@@ -49,7 +85,6 @@
 
         window.upgradedSpeed = 18; window.isSlowMode = false; window.wallet = 0; window.speedCost = 50;
 
-        // --- MAP SETUP ---
         const mapWidth = 160, mapLength = 1600, safeLineZ = 400, baseZ = 600, spawnZ = -800;
         const ground = new THREE.Mesh(new THREE.PlaneGeometry(mapWidth, mapLength), new THREE.MeshStandardMaterial({ color: 0x22ff22 }));
         ground.rotation.x = -Math.PI / 2; scene.add(ground);
@@ -71,37 +106,32 @@
             trenches.push({ z: zPos });
         }
 
-        // --- R6 PLAYER BODY ---
         const player = new THREE.Group();
-        const limbMat = new THREE.MeshStandardMaterial({color: 0xffffff});
-        const headMat = new THREE.MeshStandardMaterial({color: 0x000000});
-
-        const torso = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 1), limbMat);
-        const head = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.2, 1.2), headMat);
+        const yellowMat = new THREE.MeshStandardMaterial({color: 0xffff00});
+        const greenMat = new THREE.MeshStandardMaterial({color: 0x00ff00});
+        const blueMat = new THREE.MeshStandardMaterial({color: 0x0000ff});
+        const torso = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 1), greenMat);
+        const head = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.2, 1.2), yellowMat);
         head.position.y = 1.6;
-        
-        const lArm = new THREE.Mesh(new THREE.BoxGeometry(1, 2, 1), limbMat);
-        lArm.position.set(-1.5, 0, 0);
-        const rArm = new THREE.Mesh(new THREE.BoxGeometry(1, 2, 1), limbMat);
-        rArm.position.set(1.5, 0, 0);
-        
-        const lLeg = new THREE.Mesh(new THREE.BoxGeometry(1, 2, 1), limbMat);
-        lLeg.position.set(-0.5, -2, 0);
-        const rLeg = new THREE.Mesh(new THREE.BoxGeometry(1, 2, 1), limbMat);
-        rLeg.position.set(0.5, -2, 0);
-
-        const carryContainer = new THREE.Group();
-        carryContainer.position.y = 3; 
-        
+        const lArm = new THREE.Mesh(new THREE.BoxGeometry(1, 2, 1), yellowMat); lArm.position.set(-1.5, 0, 0);
+        const rArm = new THREE.Mesh(new THREE.BoxGeometry(1, 2, 1), yellowMat); rArm.position.set(1.5, 0, 0);
+        const lLeg = new THREE.Mesh(new THREE.BoxGeometry(1, 2, 1), blueMat); lLeg.position.set(-0.5, -2, 0);
+        const rLeg = new THREE.Mesh(new THREE.BoxGeometry(1, 2, 1), blueMat); rLeg.position.set(0.5, -2, 0);
+        const carryContainer = new THREE.Group(); carryContainer.position.y = 3; 
         torso.add(head, lArm, rArm, lLeg, rLeg, carryContainer);
         player.add(torso);
-        
         const arrow = new THREE.Mesh(new THREE.ConeGeometry(1, 2, 8), new THREE.MeshBasicMaterial({color: 0xffff00, depthTest: false}));
         arrow.rotation.x = Math.PI; arrow.position.y = 7.5; arrow.visible = false; arrow.renderOrder = 10000;
-        player.add(arrow); 
-        player.position.set(0, 3.5, baseZ + 50); scene.add(player);
+        player.add(arrow); player.position.set(0, 3.5, baseZ + 50); scene.add(player);
 
-        // --- BRAINROTS & TYCOON ---
+        function createWaveLabel(emoji, speedText) {
+            const canvas = document.createElement('canvas'); canvas.width = 512; canvas.height = 128;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = 'white'; ctx.font = 'Bold 80px Arial'; ctx.textAlign = 'center';
+            ctx.fillText(`${emoji} ${speedText}`, 256, 90);
+            return new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(canvas) }));
+        }
+
         const brainrots = [];
         const geometries = [new THREE.BoxGeometry(2,2,2), new THREE.SphereGeometry(1.2,16,16), new THREE.ConeGeometry(1.5,2.5,8), new THREE.TorusGeometry(1,0.4,8,16)];
         function spawnB() {
@@ -162,42 +192,48 @@
         window.onkeydown=(e)=>keys[e.code]=true; window.onkeyup=(e)=>{keys[e.code]=false; if(e.code==='KeyE')holdTime=0;};
         setInterval(() => { slots.forEach(s => { if(s.isActive) { s.storedCash += Math.floor(s.income); s.colBtn.material.map = createBtnTex(`$${Math.floor(s.storedCash)}\nCOLLECT`, "#00aa00"); } }); }, 1000);
 
-        // --- ANIMATION LOOP ---
         function animate(time) {
             requestAnimationFrame(animate);
             if(time - lastWave > 4000) {
-                const roll = Math.random(); let color, speed;
-                if(roll < 0.2) { color = 0xff0000; speed = 7.5; } else if(roll < 0.5) { color = 0x00ff00; speed = 4.5; } else { color = 0x0066ff; speed = 2.5; }
-                const w = new THREE.Mesh(new THREE.PlaneGeometry(170, 80), new THREE.MeshStandardMaterial({ color, transparent: true, opacity: 0.7, side: THREE.DoubleSide }));
-                w.position.set(0, 40, spawnZ + 20); w.userData = { speed }; scene.add(w); waves.push(w); lastWave = time;
+                const roll = Math.random(); let color, speed, emo, sTxt;
+                if(roll < 0.2) { color = 0xff0000; speed = 7.5; emo = "😡"; sTxt = "FAST"; } 
+                else if(roll < 0.5) { color = 0x00ff00; speed = 4.5; emo = "😐"; sTxt = "NORMAL"; } 
+                else { color = 0x0066ff; speed = 2.5; emo = "😃"; sTxt = "SLOW"; }
+                const w = new THREE.Mesh(new THREE.BoxGeometry(170, 80, 10), new THREE.MeshStandardMaterial({ color, opacity: 1 }));
+                w.position.set(0, 40, spawnZ + 20); 
+                const lbl = createWaveLabel(emo, sTxt); lbl.position.y = 50; lbl.scale.set(60, 15, 1); w.add(lbl);
+                w.userData = { speed }; scene.add(w); waves.push(w); lastWave = time;
             }
 
             const sDown = keys['KeyS'];
             const moving = keys['KeyW'] || keys['KeyS'] || keys['KeyA'] || keys['KeyD'];
             let currentMoveSpeed = window.isSlowMode ? 18 : window.upgradedSpeed;
             const moveAmt = currentMoveSpeed * 0.05;
-            let nX = player.position.x, nZ = player.position.z;
+            let moveX = 0, moveZ = 0;
 
-            if(keys['KeyW']) nZ -= moveAmt; if(sDown) nZ += moveAmt;
-            if(keys['KeyA']) nX += sDown ? moveAmt : -moveAmt; if(keys['KeyD']) nX += sDown ? -moveAmt : moveAmt;
+            if(keys['KeyW']) moveZ -= 1;
+            if(keys['KeyS']) moveZ += 1;
+            if(keys['KeyA']) moveX += sDown ? 1 : -1; 
+            if(keys['KeyD']) moveX += sDown ? -1 : 1;
 
-            if(nX > -75 && nX < 75) player.position.x = nX;
-            if(nZ > spawnZ + 10 && nZ < baseZ + 180) player.position.z = nZ;
-            player.rotation.y = sDown ? Math.PI : 0;
-
-            // R6 ANIMATION LOGIC
             if(moving) {
+                const angle = Math.atan2(moveX, moveZ);
+                player.rotation.y = THREE.MathUtils.lerp(player.rotation.y, angle + Math.PI, 0.2);
+                let nX = player.position.x + (moveX * moveAmt);
+                let nZ = player.position.z + (moveZ * moveAmt);
+                if(nX > -75 && nX < 75) player.position.x = nX;
+                if(nZ > spawnZ + 10 && nZ < baseZ + 180) player.position.z = nZ;
                 const animSpeed = time * 0.01;
                 const swing = Math.sin(animSpeed) * 0.5;
-                lArm.rotation.x = swing;
-                rArm.rotation.x = -swing;
-                lLeg.rotation.x = -swing;
-                rLeg.rotation.x = swing;
-                torso.position.y = Math.sin(animSpeed * 2) * 0.1; // Body bob
+                lArm.rotation.x = swing; rArm.rotation.x = -swing;
+                lLeg.rotation.x = -swing; rLeg.rotation.x = swing;
+                torso.position.y = Math.sin(animSpeed * 2) * 0.1;
             } else {
-                lArm.rotation.x = rArm.rotation.x = lLeg.rotation.x = rLeg.rotation.x = 0;
-                torso.position.y = 0;
+                lArm.rotation.x = rArm.rotation.x = lLeg.rotation.x = rLeg.rotation.x = 0; torso.position.y = 0;
             }
+
+            // CROSSFADE LOGIC
+            crossfadeMusic(player.position.z < safeLineZ);
 
             let inT = false;
             trenches.forEach(t => { if(Math.abs(player.position.z - t.z) < 15 && player.position.z < safeLineZ) inT = true; });
@@ -236,7 +272,7 @@
                 if(player.position.distanceTo(sl.g.position.clone().add(new THREE.Vector3(3,1,3))) < 5 && window.wallet >= sl.upCost) { window.wallet -= Math.floor(sl.upCost); sl.lvl++; sl.income = Math.floor(sl.income * 1.1); sl.upCost = Math.floor(sl.upCost * 3); sl.upBtn.material.map = createBtnTex(`LVL ${sl.lvl}\n$${Math.floor(sl.upCost)}`, "#0000aa"); sl.label.material = createLabelMat(sl.data.mut, `$${Math.floor(sl.income)}/s`, sl.data.color); updateUI(); }
             });
 
-            let camOffset = sDown ? new THREE.Vector3(0, 30, -50) : new THREE.Vector3(0, 30, 50);
+            let camOffset = sDown ? new THREE.Vector3(0, 24, -40) : new THREE.Vector3(0, 24, 40);
             let lookAtPos = sDown ? player.position.clone().add(new THREE.Vector3(0, 0, 60)) : player.position.clone().add(new THREE.Vector3(0, 0, -60));
             camera.position.lerp(player.position.clone().add(camOffset), 0.1);
             camera.lookAt(lookAtPos);
