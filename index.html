@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>BRAINROT TYCOON: SOUND EDITION</title>
+    <title>Escape The Tusunami For Shapes</title>
     <style>
         body { margin: 0; overflow: hidden; background: #87CEEB; font-family: 'Arial Black', sans-serif; }
         #stats { position: absolute; top: 10px; left: 10px; color: yellow; font-size: 24px; background: rgba(0,0,0,0.8); padding: 15px; border-radius: 10px; z-index: 10; border: 2px solid #fff; }
@@ -18,7 +18,7 @@
 <body onclick="startAudio()">
     <div id="audio-notice">🔈 Click anywhere to enable music</div>
     <div id="stats">
-        💰 Wallet: $<span id="m">0</span><br>
+        💰 Money: $<span id="m">0</span><br>
         ⚡ Speed: <span id="speed-val">18</span><br>
         <button id="slow-mode-btn">SLOW MODE: OFF</button>
     </div>
@@ -197,7 +197,7 @@
             if(time - lastWave > 4000) {
                 const roll = Math.random(); let color, speed, emo, sTxt;
                 if(roll < 0.2) { color = 0xff0000; speed = 7.5; emo = "😡"; sTxt = "FAST"; } 
-                else if(roll < 0.5) { color = 0x00ff00; speed = 4.5; emo = "😐"; sTxt = "NORMAL"; } 
+                else if(roll < 0.5) { color = 0x00ff00; speed = 4.5; emo = "😐"; sTxt = "MEDIUM"; } 
                 else { color = 0x0066ff; speed = 2.5; emo = "😃"; sTxt = "SLOW"; }
                 const w = new THREE.Mesh(new THREE.BoxGeometry(170, 80, 10), new THREE.MeshStandardMaterial({ color, opacity: 1 }));
                 w.position.set(0, 40, spawnZ + 20); 
